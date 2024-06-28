@@ -18,24 +18,26 @@ public class EventConsumer<T> : IDisposable
     /// </summary>
     public IProducerConsumer<T> Consumer { get; }
 
-    /// <summary>
-    /// ConsumerBuilder
-    /// </summary>
-    public FullRedis Builder { get; set; }
+    ///// <summary>
+    ///// ConsumerBuilder
+    ///// </summary>
+    //public FullRedis Builder { get; set; }
 
     /// <summary>
     /// 消息回调
     /// </summary>
     public event EventHandler<T> Received;
 
-    /// <summary>
-    /// 构造函数
-    /// </summary>
-    public EventConsumer(FullRedis redis, string routeKey)
-    {
-        Builder = redis;
-        Consumer = Builder.GetQueue<T>(routeKey);
-    }
+    ///// <summary>
+    ///// 构造函数
+    ///// </summary>
+    //public EventConsumer(FullRedis redis, string routeKey)
+    //{
+    //    Builder = redis;
+    //    Consumer = Builder.GetQueue<T>(routeKey);
+    //}
+
+    public EventConsumer(IProducerConsumer<T> consumer) => Consumer = consumer;
 
     /// <summary>
     /// 启动
@@ -104,7 +106,7 @@ public class EventConsumer<T> : IDisposable
             {
                 Stop().Wait();
             }
-            Builder.Dispose();
+            //Builder.Dispose();
         }
     }
 }

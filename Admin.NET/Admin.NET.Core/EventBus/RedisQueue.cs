@@ -11,7 +11,28 @@ namespace Admin.NET.Core;
 /// </summary>
 public static class RedisQueue
 {
-    private static ICache _cache = App.GetService<ICache>();
+    //private static ICache _cache = App.GetService<ICache>();
+    private static ICacheProvider _cacheProvider = App.GetService<ICacheProvider>();
+
+    /// <summary>创建Redis消息队列。默认消费一次，指定消费者group时使用STREAM结构，支持多消费组共享消息</summary>
+    /// <remarks>
+    /// 使用队列时，可根据是否设置消费组来决定使用简单队列还是完整队列。 简单队列（如RedisQueue）可用作命令队列，Topic很多，但几乎没有消息。 完整队列（如RedisStream）可用作消息队列，Topic很少，但消息很多，并且支持多消费组。
+    /// </remarks>
+    /// <typeparam name="T"></typeparam>
+    /// <param name="topic">主题</param>
+    /// <param name="group">消费组。未指定消费组时使用简单队列（如RedisQueue），指定消费组时使用完整队列（如RedisStream）</param>
+    /// <returns></returns>
+    public static IProducerConsumer<T> GetQueue<T>(String topic, String group = null)
+    {
+        // 队列需要单列
+        var key = $"myStream:{topic}";
+        if (_cacheProvider.InnerCache.TryGetValue<IProducerConsumer<T>>(key, out var queue)) return queue;
+
+        queue = _cacheProvider.GetQueue<T>(topic, group);
+        _cacheProvider.Cache.Set(key, queue);
+
+        return queue;
+    }
 
     /// <summary>
     /// 获取可信队列，需要确认
@@ -21,7 +42,16 @@ public static class RedisQueue
     /// <returns></returns>
     public static RedisReliableQueue<T> GetRedisReliableQueue<T>(string topic)
     {
-        var queue = (_cache as FullRedis).GetReliableQueue<T>(topic);
+        //var queue = (_cache as FullRedis).GetReliableQueue<T>(topic);
+        //return queue;
+
+        // 队列需要单列
+        var key = $"myQueue:{topic}";
+        if (_cacheProvider.InnerCache.TryGetValue<RedisReliableQueue<T>>(key, out var queue)) return queue;
+
+        queue = (_cacheProvider.Cache as FullRedis).GetReliableQueue<T>(topic);
+        _cacheProvider.Cache.Set(key, queue);
+
         return queue;
     }
 
@@ -47,7 +77,8 @@ public static class RedisQueue
     /// <returns></returns>
     public static int AddReliableQueueList<T>(string topic, List<T> value)
     {
-        var queue = (_cache as FullRedis).GetReliableQueue<T>(topic);
+        //var queue = (_cache as FullRedis).GetReliableQueue<T>(topic);
+        var queue = GetRedisReliableQueue<T>(topic);
         var count = queue.Count;
         var result = queue.Add(value.ToArray());
         return result - count;
@@ -62,7 +93,8 @@ public static class RedisQueue
     /// <returns></returns>
     public static int AddReliableQueue<T>(string topic, T value)
     {
-        var queue = (_cache as FullRedis).GetReliableQueue<T>(topic);
+        //var queue = (_cache as FullRedis).GetReliableQueue<T>(topic);
+        var queue = GetRedisReliableQueue<T>(topic);
         var count = queue.Count;
         var result = queue.Add(value);
         return result - count;
@@ -76,7 +108,16 @@ public static class RedisQueue
     /// <returns></returns>
     public static RedisDelayQueue<T> GetDelayQueue<T>(string topic)
     {
-        var queue = (_cache as FullRedis).GetDelayQueue<T>(topic);
+        //var queue = (_cache as FullRedis).GetDelayQueue<T>(topic);
+        //return queue;
+
+        // 队列需要单列
+        var key = $"myDelay:{topic}";
+        if (_cacheProvider.InnerCache.TryGetValue<RedisDelayQueue<T>>(key, out var queue)) return queue;
+
+        queue = (_cacheProvider.Cache as FullRedis).GetDelayQueue<T>(topic);
+        _cacheProvider.Cache.Set(key, queue);
+
         return queue;
     }
 
